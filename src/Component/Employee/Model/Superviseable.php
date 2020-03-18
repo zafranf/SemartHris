@@ -1,19 +1,21 @@
 <?php
 
+declare(strict_types=1);
+
 namespace KejawenLab\Application\SemartHris\Component\Employee\Model;
 
 /**
- * @author Muhamad Surya Iksanudin <surya.iksanudin@kejawenlab.com>
+ * @author Muhamad Surya Iksanudin <surya.iksanudin@gmail.com>
  */
-interface Superviseable
+interface Superviseable extends EmployeeInterface
 {
     /**
-     * @return EmployeeInterface|null
+     * @return null|Superviseable
      */
-    public function getSupervisor(): ? EmployeeInterface;
+    public function getSupervisor(): ? self;
 
     /**
-     * @param EmployeeInterface|null $supervisor
+     * @param Superviseable|null $superviseable
      */
-    public function setSupervisor(EmployeeInterface $supervisor = null): void;
+    public function setSupervisor(?self $superviseable): void;
 }

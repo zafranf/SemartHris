@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace KejawenLab\Application\SemartHris\Entity;
 
 use ApiPlatform\Core\Annotation\ApiResource;
@@ -33,7 +35,7 @@ use Symfony\Component\Validator\Constraints as Assert;
  *
  * @Gedmo\SoftDeleteable(fieldName="deletedAt")
  *
- * @author Muhamad Surya Iksanudin <surya.iksanudin@kejawenlab.id>
+ * @author Muhamad Surya Iksanudin <surya.iksanudin@gmail.com>
  */
 class SkillGroup implements SkillGroupInterface
 {
@@ -45,8 +47,9 @@ class SkillGroup implements SkillGroupInterface
      * @Groups({"read"})
      *
      * @ORM\Id()
-     * @ORM\GeneratedValue(strategy="UUID")
-     * @ORM\Column(type="guid")
+     * @ORM\Column(type="uuid", unique=true)
+     * @ORM\GeneratedValue(strategy="CUSTOM")
+     * @ORM\CustomIdGenerator(class="Ramsey\Uuid\Doctrine\UuidGenerator")
      *
      * @var string
      */
@@ -92,9 +95,9 @@ class SkillGroup implements SkillGroupInterface
     }
 
     /**
-     * @param SkillGroupInterface $parent
+     * @param SkillGroupInterface|null $parent
      */
-    public function setParent(SkillGroupInterface $parent = null): void
+    public function setParent(?SkillGroupInterface $parent): void
     {
         $this->parent = $parent;
     }

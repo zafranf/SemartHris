@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace KejawenLab\Application\SemartHris\Entity;
 
 use ApiPlatform\Core\Annotation\ApiResource;
@@ -30,7 +32,7 @@ use Symfony\Component\Validator\Constraints as Assert;
  *
  * @Gedmo\SoftDeleteable(fieldName="deletedAt")
  *
- * @author Muhamad Surya Iksanudin <surya.iksanudin@kejawenlab.id>
+ * @author Muhamad Surya Iksanudin <surya.iksanudin@gmail.com>
  */
 class EmployeeAddress implements EmployeeAddressInterface
 {
@@ -42,8 +44,9 @@ class EmployeeAddress implements EmployeeAddressInterface
      * @Groups({"read"})
      *
      * @ORM\Id()
-     * @ORM\GeneratedValue(strategy="UUID")
-     * @ORM\Column(type="guid")
+     * @ORM\Column(type="uuid", unique=true)
+     * @ORM\GeneratedValue(strategy="CUSTOM")
+     * @ORM\CustomIdGenerator(class="Ramsey\Uuid\Doctrine\UuidGenerator")
      *
      * @var string
      */
@@ -164,7 +167,7 @@ class EmployeeAddress implements EmployeeAddressInterface
     /**
      * @param EmployeeInterface|null $employee
      */
-    public function setEmployee(EmployeeInterface $employee = null): void
+    public function setEmployee(?EmployeeInterface $employee): void
     {
         $this->employee = $employee;
     }
@@ -196,7 +199,7 @@ class EmployeeAddress implements EmployeeAddressInterface
     /**
      * @param RegionInterface|null $region
      */
-    public function setRegion(RegionInterface $region = null): void
+    public function setRegion(?RegionInterface $region): void
     {
         $this->region = $region;
     }
@@ -212,7 +215,7 @@ class EmployeeAddress implements EmployeeAddressInterface
     /**
      * @param CityInterface|null $city
      */
-    public function setCity(CityInterface $city = null): void
+    public function setCity(?CityInterface $city): void
     {
         $this->city = $city;
     }
@@ -258,9 +261,9 @@ class EmployeeAddress implements EmployeeAddressInterface
     }
 
     /**
-     * @param string $faxNumber
+     * @param null|string $faxNumber
      */
-    public function setFaxNumber(string $faxNumber): void
+    public function setFaxNumber(?string $faxNumber): void
     {
         $this->faxNumber = $faxNumber;
     }
@@ -282,9 +285,9 @@ class EmployeeAddress implements EmployeeAddressInterface
     }
 
     /**
-     * @return Addressable
+     * @return Addressable|null
      */
-    public function getAddressable(): Addressable
+    public function getAddressable(): ? Addressable
     {
         return $this->getEmployee();
     }

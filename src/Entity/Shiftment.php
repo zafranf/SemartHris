@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace KejawenLab\Application\SemartHris\Entity;
 
 use ApiPlatform\Core\Annotation\ApiResource;
@@ -33,7 +35,7 @@ use Symfony\Component\Validator\Constraints as Assert;
  *
  * @Gedmo\SoftDeleteable(fieldName="deletedAt")
  *
- * @author Muhamad Surya Iksanudin <surya.iksanudin@kejawenlab.id>
+ * @author Muhamad Surya Iksanudin <surya.iksanudin@gmail.com>
  */
 class Shiftment implements ShiftmentInterface
 {
@@ -45,8 +47,9 @@ class Shiftment implements ShiftmentInterface
      * @Groups({"read"})
      *
      * @ORM\Id()
-     * @ORM\GeneratedValue(strategy="UUID")
-     * @ORM\Column(type="guid")
+     * @ORM\Column(type="uuid", unique=true)
+     * @ORM\GeneratedValue(strategy="CUSTOM")
+     * @ORM\CustomIdGenerator(class="Ramsey\Uuid\Doctrine\UuidGenerator")
      *
      * @var string
      */
@@ -148,7 +151,7 @@ class Shiftment implements ShiftmentInterface
     /**
      * @param \DateTimeInterface|null $startHour
      */
-    public function setStartHour(\DateTimeInterface $startHour = null): void
+    public function setStartHour(?\DateTimeInterface $startHour): void
     {
         $this->startHour = $startHour;
     }
@@ -164,7 +167,7 @@ class Shiftment implements ShiftmentInterface
     /**
      * @param \DateTimeInterface|null $endHour
      */
-    public function setEndHour(\DateTimeInterface $endHour = null): void
+    public function setEndHour(?\DateTimeInterface $endHour): void
     {
         $this->endHour = $endHour;
     }

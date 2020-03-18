@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace KejawenLab\Application\SemartHris\Component\Job\Service;
 
 use KejawenLab\Application\SemartHris\Component\Contract\Model\Contractable;
@@ -11,7 +13,7 @@ use KejawenLab\Application\SemartHris\Component\Job\Model\PlacementInterface;
 use KejawenLab\Application\SemartHris\Component\Job\Repository\CareerHistoryRepositoryInterface;
 
 /**
- * @author Muhamad Surya Iksanudin <surya.iksanudin@kejawenlab.com>
+ * @author Muhamad Surya Iksanudin <surya.iksanudin@gmail.com>
  */
 class AddCareerHistory
 {
@@ -57,11 +59,11 @@ class AddCareerHistory
         if ($careerHistoryable instanceof MutationInterface) {
             /** @var Contractable|EmployeeInterface $employee */
             $employee = $careerHistoryable->getEmployee();
-            $company = $careerHistoryable->getOldCompany() ?: $employee->getCompany();
-            $department = $careerHistoryable->getOldDepartment() ?: $employee->getDepartment();
-            $jobLevel = $careerHistoryable->getOldJobLevel() ?: $employee->getJobLevel();
-            $jobTitle = $careerHistoryable->getOldJobTitle() ?: $employee->getJobTitle();
-            $supervisor = $careerHistoryable->getOldSupervisor() ?: $employee->getSupervisor();
+            $company = $careerHistoryable->getOldCompany() ?? $employee->getCompany();
+            $department = $careerHistoryable->getOldDepartment() ?? $employee->getDepartment();
+            $jobLevel = $careerHistoryable->getOldJobLevel() ?? $employee->getJobLevel();
+            $jobTitle = $careerHistoryable->getOldJobTitle() ?? $employee->getJobTitle();
+            $supervisor = $careerHistoryable->getOldSupervisor() ?? $employee->getSupervisor();
 
             $careerHistory->setEmployee($employee);
             $careerHistory->setSupervisor($supervisor);

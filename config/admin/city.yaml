@@ -1,8 +1,11 @@
 easy_admin:
     entities:
         City:
+            role: '%env(string:SEMART_SECURITY_MASTER_MENU)%'
             class: 'KejawenLab\Application\SemartHris\Entity\City'
             controller: 'KejawenLab\Application\SemartHris\Controller\Admin\CityController'
+            templates:
+                list: 'app/city/list.html.twig'
             new:
                 title: 'Tambah Kota'
             edit:
@@ -25,6 +28,7 @@ easy_admin:
                     - { property: 'code', label: 'Kode Kota' }
                     - { property: 'name', label: 'Nama Kota' }
             list:
+                role: '%env(string:SEMART_SECURITY_MASTER_MENU)%'
                 title: 'Kota'
                 fields:
                     - { property: 'region', label: 'Pripinsi' }
@@ -32,8 +36,9 @@ easy_admin:
                     - { property: 'name', label: 'Nama Kota' }
 
         Region:
+            role: '%env(string:SEMART_SECURITY_MASTER_MENU)%'
             class: 'KejawenLab\Application\SemartHris\Entity\Region'
-            controller: 'EasyCorp\Bundle\EasyAdminBundle\Controller\AdminController'
+            controller: 'KejawenLab\Application\SemartHris\Controller\Admin\AdminController'
             new:
                 title: 'Tambah Propinsi'
             edit:
@@ -53,6 +58,7 @@ easy_admin:
                     - { property: 'code', label: 'Kode Propinsi' }
                     - { property: 'name', label: 'Nama Propinsi' }
             list:
+                role: '%env(string:SEMART_SECURITY_MASTER_MENU)%'
                 title: 'Propinsi'
                 fields:
                     - { property: 'code', label: 'Kode Propinsi' }

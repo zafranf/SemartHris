@@ -1,14 +1,15 @@
 <?php
 
+declare(strict_types=1);
+
 namespace KejawenLab\Application\SemartHris\Security\Voter;
 
-use KejawenLab\Application\SemartHris\Component\Employee\Model\EmployeeInterface;
 use KejawenLab\Application\SemartHris\Component\Employee\Model\Superviseable;
 use KejawenLab\Application\SemartHris\Component\Employee\Service\SupervisorChecker;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 
 /**
- * @author Muhamad Surya Iksanudin <surya.iksanudin@kejawenlab.com>
+ * @author Muhamad Surya Iksanudin <surya.iksanudin@gmail.com>
  */
 class SupervisorVoter extends Voter
 {
@@ -35,7 +36,7 @@ class SupervisorVoter extends Voter
     protected function voteOnAttribute($attribute, $subject, TokenInterface $token)
     {
         $user = $token->getUser();
-        if (!$user instanceof EmployeeInterface) {
+        if (!$user instanceof Superviseable) {
             return false;
         }
 

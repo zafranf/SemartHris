@@ -1,21 +1,29 @@
 <?php
 
+declare(strict_types=1);
+
 namespace KejawenLab\Application\SemartHris\Component\Attendance\Service;
 
 use KejawenLab\Application\SemartHris\Component\Attendance\Model\AttendanceInterface;
 use KejawenLab\Application\SemartHris\Component\Attendance\Repository\AttendanceRepositoryInterface;
 use KejawenLab\Application\SemartHris\Component\Attendance\Repository\WorkshiftRepositoryInterface;
+use KejawenLab\Application\SemartHris\Component\Attendance\Rule\NotQualifiedException;
+use KejawenLab\Application\SemartHris\Component\Attendance\Rule\RuleInterface;
 use KejawenLab\Application\SemartHris\Component\Employee\Model\EmployeeInterface;
 use KejawenLab\Application\SemartHris\Component\Holiday\Repository\HolidayRepositoryInterface;
 use KejawenLab\Application\SemartHris\Component\Reason\Repository\ReasonRepositoryInterface;
 
 /**
- * @author Muhamad Surya Iksanudin <surya.iksanudin@kejawenlab.com>
+ * @author Muhamad Surya Iksanudin <surya.iksanudin@gmail.com>
  */
 class AttendanceProcessor
 {
     const CUT_OFF_LAST_DATE = -1;
-    const CUT_OFF_KEY = 'SEMART_ATTENDANCE_CUT_OFF_DATE';
+
+    /**
+     * @var RuleInterface
+     */
+    private $attendanceRule;
 
     /**
      * @var AttendanceRepositoryInterface
@@ -43,31 +51,42 @@ class AttendanceProcessor
     private $reasonCode;
 
     /**
+     * @var int
+     */
+    private $cutOffDate;
+
+    /**
      * @var string
      */
     private $class;
 
     /**
+     * @param RuleInterface                 $attendanceRule
      * @param AttendanceRepositoryInterface $attendanceRepository
      * @param HolidayRepositoryInterface    $holidayRepository
      * @param ReasonRepositoryInterface     $reasonRepository
      * @param WorkshiftRepositoryInterface  $workshiftRepository
      * @param string                        $reasonCode
+     * @param int                           $cutOffDate
      * @param string                        $attendanceClass
      */
     public function __construct(
+        RuleInterface $attendanceRule,
         AttendanceRepositoryInterface $attendanceRepository,
         HolidayRepositoryInterface $holidayRepository,
         ReasonRepositoryInterface $reasonRepository,
         WorkshiftRepositoryInterface $workshiftRepository,
         string $reasonCode,
+        int $cutOffDate,
         string $attendanceClass
     ) {
+        $this->attendanceRule = $attendanceRule;
         $this->attendanceRepository = $attendanceRepository;
         $this->holidayRepository = $holidayRepository;
         $this->reasonRepository = $reasonRepository;
         $this->workshiftRepository = $workshiftRepository;
         $this->reasonCode = $reasonCode;
+        $this->cutOffDate = $cutOffDate;
         $this->class = $attendanceClass;
     }
 
@@ -77,11 +96,10 @@ class AttendanceProcessor
      */
     public function process(EmployeeInterface $employee, \DateTimeInterface $date): void
     {
-        $cutOff = getenv(self::CUT_OFF_KEY);
-        if ((int) $cutOff === self::CUT_OFF_LAST_DATE) {
+        if (self::CUT_OFF_LAST_DATE === $this->cutOffDate) {
             $this->processFullMonth($employee, $date);
         } else {
-            $this->processPartialMonth($employee, $date, $cutOff);
+            $this->processPartialMonth($employee, $date, $this->cutOffDate);
         }
     }
 
@@ -125,6 +143,14 @@ class AttendanceProcessor
     private function doProcess(EmployeeInterface $employee, \DateTimeInterface $date): void
     {
         $attendance = $this->attendanceRepository->findByEmployeeAndDate($employee, $date);
+        if (!$attendance) {
+            try {
+                $attendance = $this->attendanceRule->apply($employee, $date);
+            } catch (NotQualifiedException $exception) {
+                //Do nothing
+            }
+        }
+
         if ($this->holidayRepository->isHoliday($date) && !$attendance) {
             return;
         }
@@ -137,10 +163,10 @@ class AttendanceProcessor
             $attendance->setEmployee($employee);
             $attendance->setAttendanceDate($date);
             $attendance->setShiftment($workshift ? $workshift->getShiftment() : null);
-            $attendance->setReason($this->reasonRepository->findByCode($this->reasonCode));
+            $attendance->setReason($this->reasonRepository->findAbsentReasonByCode($this->reasonCode));
             $attendance->setAbsent(true);
         }
-        $attendance->setLateIn(-1); //To triggering subscriber
+        $attendance->setLateIn(-1);
 
         $this->attendanceRepository->update($attendance);
     }

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace KejawenLab\Application\SemartHris\Entity;
 
 use ApiPlatform\Core\Annotation\ApiResource;
@@ -16,15 +18,16 @@ use KejawenLab\Application\SemartHris\Component\Company\Model\CompanyInterface;
 use KejawenLab\Application\SemartHris\Component\Company\Model\DepartmentInterface;
 use KejawenLab\Application\SemartHris\Component\Contract\Model\Contractable;
 use KejawenLab\Application\SemartHris\Component\Contract\Model\ContractInterface;
-use KejawenLab\Application\SemartHris\Component\Employee\Model\EmployeeInterface;
 use KejawenLab\Application\SemartHris\Component\Employee\Model\Superviseable;
+use KejawenLab\Application\SemartHris\Component\Employee\RiskRatio;
 use KejawenLab\Application\SemartHris\Component\Employee\Service\ValidateContractType;
 use KejawenLab\Application\SemartHris\Component\Employee\Service\ValidateGender;
 use KejawenLab\Application\SemartHris\Component\Employee\Service\ValidateIdentityType;
 use KejawenLab\Application\SemartHris\Component\Employee\Service\ValidateMaritalStatus;
+use KejawenLab\Application\SemartHris\Component\Employee\Service\ValidateRiskRatio;
 use KejawenLab\Application\SemartHris\Component\Job\Model\JobLevelInterface;
 use KejawenLab\Application\SemartHris\Component\Job\Model\JobTitleInterface;
-use KejawenLab\Application\SemartHris\Component\Tax\Service\ValidateIndonesiaTaxType;
+use KejawenLab\Application\SemartHris\Component\Tax\Service\ValidateTaxGroup;
 use KejawenLab\Application\SemartHris\Component\User\Model\UserInterface;
 use KejawenLab\Application\SemartHris\Util\StringUtil;
 use KejawenLab\Application\SemartHris\Validator\Constraint\UniqueContract;
@@ -60,9 +63,9 @@ use Vich\UploaderBundle\Mapping\Annotation as Vich;
  *
  * @Vich\Uploadable()
  *
- * @author Muhamad Surya Iksanudin <surya.iksanudin@kejawenlab.id>
+ * @author Muhamad Surya Iksanudin <surya.iksanudin@gmail.com>
  */
-class Employee implements EmployeeInterface, Superviseable, Contractable, UserInterface, \Serializable
+class Employee implements Superviseable, Contractable, UserInterface, \Serializable
 {
     use BlameableEntity;
     use SoftDeleteableEntity;
@@ -72,8 +75,9 @@ class Employee implements EmployeeInterface, Superviseable, Contractable, UserIn
      * @Groups({"read"})
      *
      * @ORM\Id()
-     * @ORM\GeneratedValue(strategy="UUID")
-     * @ORM\Column(type="guid")
+     * @ORM\Column(type="uuid", unique=true)
+     * @ORM\GeneratedValue(strategy="CUSTOM")
+     * @ORM\CustomIdGenerator(class="Ramsey\Uuid\Doctrine\UuidGenerator")
      *
      * @var string
      */
@@ -170,7 +174,7 @@ class Employee implements EmployeeInterface, Superviseable, Contractable, UserIn
      *
      * @ApiSubresource()
      *
-     * @var EmployeeInterface
+     * @var Superviseable
      */
     private $supervisor;
 
@@ -304,15 +308,6 @@ class Employee implements EmployeeInterface, Superviseable, Contractable, UserIn
     /**
      * @Groups({"read"})
      *
-     * @ORM\Column(type="float", scale=27, precision=2, nullable=true)
-     *
-     * @var float
-     */
-    private $basicSalary;
-
-    /**
-     * @Groups({"read"})
-     *
      * @ORM\Column(type="integer", nullable=true)
      *
      * @var int
@@ -349,6 +344,18 @@ class Employee implements EmployeeInterface, Superviseable, Contractable, UserIn
     private $haveOvertimeBenefit;
 
     /**
+     * @Groups({"read", "write"})
+     *
+     * @ORM\Column(type="string", length=3)
+     *
+     * @Assert\NotBlank()
+     * @Assert\Choice(callback="getRiskRatioChoices")
+     *
+     * @var string
+     */
+    private $riskRatio;
+
+    /**
      * @Groups({"read"})
      *
      * @ORM\Column(type="string")
@@ -383,14 +390,14 @@ class Employee implements EmployeeInterface, Superviseable, Contractable, UserIn
     private $imageFile;
 
     /**
-     * @ORM\Column(type="string")
+     * @ORM\Column(type="string", nullable=true)
      *
      * @var string
      */
     private $profileImage;
 
     /**
-     * @ORM\Column(type="integer")
+     * @ORM\Column(type="integer", nullable=true)
      *
      * @var int
      */
@@ -404,6 +411,7 @@ class Employee implements EmployeeInterface, Superviseable, Contractable, UserIn
     public function __construct()
     {
         $this->haveOvertimeBenefit = false;
+        $this->riskRatio = RiskRatio::RISK_VERY_LOW;
     }
 
     /**
@@ -469,7 +477,7 @@ class Employee implements EmployeeInterface, Superviseable, Contractable, UserIn
     /**
      * @param ContractInterface $contract
      */
-    public function setContract(ContractInterface $contract = null): void
+    public function setContract(?ContractInterface $contract): void
     {
         $this->contract = $contract;
     }
@@ -485,7 +493,7 @@ class Employee implements EmployeeInterface, Superviseable, Contractable, UserIn
     /**
      * @param CompanyInterface|null $company
      */
-    public function setCompany(CompanyInterface $company = null): void
+    public function setCompany(?CompanyInterface $company): void
     {
         $this->company = $company;
     }
@@ -501,7 +509,7 @@ class Employee implements EmployeeInterface, Superviseable, Contractable, UserIn
     /**
      * @param DepartmentInterface|null $department
      */
-    public function setDepartment(DepartmentInterface $department = null): void
+    public function setDepartment(?DepartmentInterface $department): void
     {
         $this->department = $department;
     }
@@ -517,7 +525,7 @@ class Employee implements EmployeeInterface, Superviseable, Contractable, UserIn
     /**
      * @param JobLevelInterface|null $jobLevel
      */
-    public function setJobLevel(JobLevelInterface $jobLevel = null): void
+    public function setJobLevel(?JobLevelInterface $jobLevel): void
     {
         $this->jobLevel = $jobLevel;
     }
@@ -533,23 +541,23 @@ class Employee implements EmployeeInterface, Superviseable, Contractable, UserIn
     /**
      * @param JobTitleInterface|null $jobTitle
      */
-    public function setJobTitle(JobTitleInterface $jobTitle = null): void
+    public function setJobTitle(?JobTitleInterface $jobTitle): void
     {
         $this->jobTitle = $jobTitle;
     }
 
     /**
-     * @return EmployeeInterface|null
+     * @return Superviseable|null
      */
-    public function getSupervisor(): ? EmployeeInterface
+    public function getSupervisor(): ? Superviseable
     {
         return $this->supervisor;
     }
 
     /**
-     * @param EmployeeInterface|null $supervisor
+     * @param Superviseable|null $supervisor
      */
-    public function setSupervisor(EmployeeInterface $supervisor = null): void
+    public function setSupervisor(?Superviseable $supervisor): void
     {
         $this->supervisor = $supervisor;
     }
@@ -625,7 +633,7 @@ class Employee implements EmployeeInterface, Superviseable, Contractable, UserIn
     /**
      * @param RegionInterface|null $regionOfBirth
      */
-    public function setRegionOfBirth(RegionInterface $regionOfBirth = null): void
+    public function setRegionOfBirth(?RegionInterface $regionOfBirth): void
     {
         $this->regionOfBirth = $regionOfBirth;
     }
@@ -641,7 +649,7 @@ class Employee implements EmployeeInterface, Superviseable, Contractable, UserIn
     /**
      * @param CityInterface|null $cityOfBirth
      */
-    public function setCityOfBirth(CityInterface $cityOfBirth = null): void
+    public function setCityOfBirth(?CityInterface $cityOfBirth): void
     {
         $this->cityOfBirth = $cityOfBirth;
     }
@@ -651,7 +659,7 @@ class Employee implements EmployeeInterface, Superviseable, Contractable, UserIn
      */
     public function getDateOfBirth(): \DateTimeInterface
     {
-        return $this->dateOfBirth ?: new \DateTime();
+        return $this->dateOfBirth ?? new \DateTime();
     }
 
     /**
@@ -761,25 +769,9 @@ class Employee implements EmployeeInterface, Superviseable, Contractable, UserIn
     /**
      * @param AddressInterface|null $address
      */
-    public function setAddress(AddressInterface $address = null): void
+    public function setAddress(?AddressInterface $address): void
     {
         $this->address = $address;
-    }
-
-    /**
-     * @return float
-     */
-    public function getBasicSalary(): float
-    {
-        return (float) $this->basicSalary;
-    }
-
-    /**
-     * @param float $basicSalary
-     */
-    public function setBasicSalary(float $basicSalary): void
-    {
-        $this->basicSalary = $basicSalary;
     }
 
     /**
@@ -811,15 +803,15 @@ class Employee implements EmployeeInterface, Superviseable, Contractable, UserIn
      */
     public function getTaxGroupText(): string
     {
-        return ValidateIndonesiaTaxType::convertToText($this->taxGroup);
+        return ValidateTaxGroup::convertToText($this->taxGroup);
     }
 
     /**
-     * @param string $taxGroup
+     * @param null|string $taxGroup
      */
-    public function setTaxGroup(string $taxGroup): void
+    public function setTaxGroup(?string $taxGroup): void
     {
-        if (!ValidateIndonesiaTaxType::isValidType($taxGroup)) {
+        if (!ValidateTaxGroup::isValidType((string) $taxGroup)) {
             throw new \InvalidArgumentException(sprintf('"%s" is not valid tax type.', $taxGroup));
         }
 
@@ -871,6 +863,31 @@ class Employee implements EmployeeInterface, Superviseable, Contractable, UserIn
     /**
      * @return string
      */
+    public function getRiskRatio(): string
+    {
+        return $this->riskRatio ?? RiskRatio::RISK_VERY_LOW;
+    }
+
+    public function getRiskRatioText(): string
+    {
+        return ValidateRiskRatio::convertToText($this->riskRatio);
+    }
+
+    /**
+     * @param null|string $riskRatio
+     */
+    public function setRiskRatio(?string $riskRatio): void
+    {
+        if (!ValidateRiskRatio::isValidType((string) $riskRatio)) {
+            throw new \InvalidArgumentException(sprintf('"%s" is not valid risk ratio.', $riskRatio));
+        }
+
+        $this->riskRatio = $riskRatio;
+    }
+
+    /**
+     * @return string
+     */
     public function getUsername(): string
     {
         return (string) $this->username;
@@ -905,7 +922,7 @@ class Employee implements EmployeeInterface, Superviseable, Contractable, UserIn
      */
     public function getRoles(): array
     {
-        return $this->roles ?: ['ROLE_USER'];
+        return $this->roles ?? [self::DEFAULT_ROLE];
     }
 
     /**
@@ -936,7 +953,7 @@ class Employee implements EmployeeInterface, Superviseable, Contractable, UserIn
      */
     public function isResign(): bool
     {
-        $now = new \DateTime();
+        $now = \DateTime::createFromFormat('Y-m-d 00:00:00', date('Y-m-d'));
         if (!$this->getResignDate()) {
             return false;
         }
@@ -995,7 +1012,15 @@ class Employee implements EmployeeInterface, Superviseable, Contractable, UserIn
      */
     public function getTaxGroupChoices(): array
     {
-        return ValidateIndonesiaTaxType::getTypes();
+        return ValidateTaxGroup::getTypes();
+    }
+
+    /**
+     * @return array
+     */
+    public function getRiskRatioChoices(): array
+    {
+        return ValidateRiskRatio::getTypes();
     }
 
     /**
@@ -1031,7 +1056,7 @@ class Employee implements EmployeeInterface, Superviseable, Contractable, UserIn
     /**
      * @param null|string $plainPassword
      */
-    public function setPlainPassword(string $plainPassword = null): void
+    public function setPlainPassword(?string $plainPassword): void
     {
         $this->plainPassword = $plainPassword;
     }
@@ -1047,7 +1072,7 @@ class Employee implements EmployeeInterface, Superviseable, Contractable, UserIn
     /**
      * @param File|null $imageFile
      */
-    public function setImageFile(File $imageFile = null): void
+    public function setImageFile(?File $imageFile): void
     {
         if ($imageFile) {
             $this->updatedAt = new \DateTime();
@@ -1065,9 +1090,9 @@ class Employee implements EmployeeInterface, Superviseable, Contractable, UserIn
     }
 
     /**
-     * @param string $profileImage
+     * @param null|string $profileImage
      */
-    public function setProfileImage(string $profileImage = null): void
+    public function setProfileImage(?string $profileImage): void
     {
         $this->profileImage = $profileImage;
     }
@@ -1081,9 +1106,9 @@ class Employee implements EmployeeInterface, Superviseable, Contractable, UserIn
     }
 
     /**
-     * @param int $profileSize
+     * @param int|null $profileSize
      */
-    public function setProfileSize(int $profileSize = null): void
+    public function setProfileSize(?int $profileSize): void
     {
         $this->profileSize = $profileSize;
     }
